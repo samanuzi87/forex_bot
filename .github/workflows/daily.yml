@@ -27,6 +27,8 @@ jobs:
           GMAIL_SENDER_EMAIL: ${{ secrets.GMAIL_SENDER_EMAIL }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           GMAIL_RECEIVER_EMAIL: ${{ secrets.GMAIL_RECEIVER_EMAIL }}
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
       - name: Commit updated history back to repo
