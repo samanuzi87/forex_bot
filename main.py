@@ -1,12 +1,10 @@
 """
-ربات تحلیل‌گر فارکس - مرحله ۷: انتخاب نماد از طریق پاسخ ایمیل
+ربات تحلیل‌گر فارکس - مرحله ۸: افزودن گزارش هفتگی (پنجشنبه‌ها، ایمیل جداگانه)
 این اسکریپت:
-1) قبل از هر گزارش، صندوق ورودی جیمیل رو چک می‌کنه ببینه ایمیلی با موضوع
-   "SELECT SYMBOLS" اومده یا نه؛ اگه اومده، نمادها رو طبق شماره‌های داخلش تغییر می‌ده.
-2) قیمت لحظه‌ای نمادهای انتخاب‌شده رو از Twelve Data می‌گیره.
-3) قیمت امروز رو با روز قبل مقایسه و در صورت تغییر زیاد هشدار می‌ده.
-4) یک نمودار روند قیمت برای هر نماد می‌سازد.
-5) گزارش کامل (متن + نمودارها + لیست نمادهای قابل‌انتخاب) رو با ایمیل می‌فرسته.
+1) صندوق ورودی رو برای درخواست تغییر نماد (SELECT SYMBOLS) چک می‌کنه.
+2) قیمت لحظه‌ای نمادها رو می‌گیره، تحلیل می‌کنه، نمودار می‌سازه، گزارش روزانه می‌فرسته.
+3) اگه امروز پنجشنبه باشه، یک ایمیل کاملاً جداگانه با خلاصه‌ی هفتگی (کمترین،
+   بیشترین، میانگین، درصد تغییر ۷ روز اخیر) هم می‌فرسته.
 """
 
 import json
@@ -19,7 +17,7 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 from email.mime.image import MIMEImage
 import requests
-from datetime import datetime
+from datetime import datetime, timedelta
 
 import matplotlib
 matplotlib.use("Agg")
@@ -32,7 +30,6 @@ MAX_HISTORY_POINTS = 30
 CHARTS_DIR = "charts"
 SYMBOLS_FILE = "config.json"
 
-# لیست نمادهایی که کاربر می‌تونه از بینشون انتخاب کنه (می‌تونی بعداً بیشترش کنی)
 SYMBOL_CATALOG = [
     "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
     "AUD/USD", "USD/CAD", "NZD/USD", "EUR/GBP",
@@ -73,16 +70,10 @@ def get_required_env(name):
 
 
 # ---------------------------------------------------------------
-# بخش جدید: خوندن ایمیل درخواست تغییر نماد از صندوق ورودی
+# انتخاب نماد از طریق پاسخ ایمیل
 # ---------------------------------------------------------------
 
 def check_symbol_selection_email(config, sender_email, app_password):
-    """
-    صندوق ورودی جیمیل رو برای ایمیل خوانده‌نشده با موضوع "SELECT SYMBOLS" می‌گرده.
-    اگه پیدا کرد، شماره‌های داخل متن ایمیل رو استخراج می‌کنه، به نماد تبدیل می‌کنه،
-    و config رو به‌روزرسانی می‌کنه.
-    خروجی: (config به‌روزشده, لیست نمادهای جدید یا None اگه چیزی تغییر نکرد)
-    """
     try:
         imap = imaplib.IMAP4_SSL("imap.gmail.com")
         imap.login(sender_email, app_password)
@@ -94,7 +85,7 @@ def check_symbol_selection_email(config, sender_email, app_password):
             return config, None
 
         email_ids = data[0].split()
-        latest_id = email_ids[-1]  # فقط جدیدترین درخواست رو در نظر می‌گیریم
+        latest_id = email_ids[-1]
 
         status, msg_data = imap.fetch(latest_id, "(RFC822)")
         raw_email = msg_data[0][1]
@@ -113,16 +104,13 @@ def check_symbol_selection_email(config, sender_email, app_password):
             if payload:
                 body = payload.decode(errors="ignore")
 
-        # همه‌ی عددهای داخل متن ایمیل رو استخراج می‌کنیم (مثلا از "1, 4, 10")
         numbers = [int(n) for n in re.findall(r"\d+", body)]
         selected_symbols = [
             SYMBOL_CATALOG[n - 1] for n in numbers
             if 1 <= n <= len(SYMBOL_CATALOG)
         ]
-        # حذف تکراری‌ها با حفظ ترتیب
         selected_symbols = list(dict.fromkeys(selected_symbols))
 
-        # این ایمیل رو خونده‌شده علامت می‌زنیم تا دوباره پردازش نشه
         imap.store(latest_id, "+FLAGS", "\\Seen")
         imap.logout()
 
@@ -140,9 +128,6 @@ def check_symbol_selection_email(config, sender_email, app_password):
 
 
 def build_symbol_catalog_text(current_symbols):
-    """
-    متن لیست نمادهای قابل‌انتخاب رو می‌سازه، تا در پایین هر گزارش نشون داده بشه.
-    """
     lines = []
     lines.append("")
     lines.append("-" * 50)
@@ -159,7 +144,7 @@ def build_symbol_catalog_text(current_symbols):
 
 
 # ---------------------------------------------------------------
-# بخش‌های قبلی: گرفتن قیمت، تحلیل، نمودار، ارسال ایمیل
+# گرفتن قیمت، تحلیل، نمودار
 # ---------------------------------------------------------------
 
 def get_price(symbol, api_key):
@@ -256,6 +241,67 @@ def build_report_text(symbols, api_key, history, series):
     return "\n".join(lines), new_history, series, chart_paths
 
 
+# ---------------------------------------------------------------
+# بخش جدید: گزارش هفتگی (پنجشنبه‌ها)
+# ---------------------------------------------------------------
+
+def is_thursday():
+    """پنجشنبه در پایتون روز شماره ۳ هفته است (دوشنبه=۰)."""
+    return datetime.now().weekday() == 3
+
+
+def build_weekly_summary(symbols, series):
+    """
+    برای هر نماد، آمار ۷ روز اخیر رو از price_series.json محاسبه می‌کنه:
+    کمترین، بیشترین، میانگین، و درصد تغییر از اول تا آخر هفته.
+    """
+    lines = []
+    lines.append(f"📅 خلاصه‌ی هفتگی ربات فارکس - {datetime.now().strftime('%Y-%m-%d')}")
+    lines.append("=" * 50)
+    lines.append("")
+
+    week_ago = datetime.now() - timedelta(days=7)
+
+    for symbol in symbols:
+        points = series.get(symbol, [])
+        week_points = []
+        for p in points:
+            try:
+                p_time = datetime.strptime(p["time"], "%Y-%m-%d %H:%M")
+            except ValueError:
+                continue
+            if p_time >= week_ago:
+                week_points.append(p)
+
+        lines.append(f"🔹 {symbol}")
+
+        if len(week_points) < 2:
+            lines.append("   داده‌ی کافی برای این هفته هنوز جمع نشده.")
+            lines.append("")
+            continue
+
+        prices = [p["price"] for p in week_points]
+        first_price = prices[0]
+        last_price = prices[-1]
+        min_price = min(prices)
+        max_price = max(prices)
+        avg_price = sum(prices) / len(prices)
+        change_percent = ((last_price - first_price) / first_price) * 100
+        sign = "+" if change_percent >= 0 else ""
+
+        lines.append(f"   کمترین قیمت هفته: {min_price}")
+        lines.append(f"   بیشترین قیمت هفته: {max_price}")
+        lines.append(f"   میانگین قیمت هفته: {avg_price:.5f}")
+        lines.append(f"   تغییر از اول تا امروز: {sign}{change_percent:.2f}%")
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------
+# ارسال ایمیل
+# ---------------------------------------------------------------
+
 def send_email(subject, body, sender, password, receiver, image_paths=None):
     image_paths = image_paths or []
 
@@ -294,7 +340,6 @@ def main():
     app_password = get_required_env("GMAIL_APP_PASSWORD")
     receiver_email = get_required_env("GMAIL_RECEIVER_EMAIL")
 
-    # قدم ۱: بررسی این‌که آیا کاربر ایمیلی برای تغییر نماد فرستاده
     config, updated_symbols = check_symbol_selection_email(config, sender_email, app_password)
 
     if updated_symbols:
@@ -307,7 +352,6 @@ def main():
             receiver=receiver_email
         )
 
-    # اگه هنوز هیچ نمادی (نه از قبل، نه از ایمیل) مشخص نشده، از نمادهای پیش‌فرض استفاده می‌کنیم
     if not config.get("symbols"):
         config["symbols"] = ["EUR/USD", "XAU/USD"]
         save_symbols_config(config)
@@ -325,7 +369,7 @@ def main():
     save_json_file(new_history, HISTORY_FILE)
     save_json_file(new_series, SERIES_FILE)
 
-    print("\n📧 در حال ارسال گزارش با ایمیل...")
+    print("\n📧 در حال ارسال گزارش روزانه با ایمیل...")
     success, error = send_email(
         subject="📊 گزارش روزانه ربات فارکس",
         body=report_text,
@@ -336,9 +380,28 @@ def main():
     )
 
     if success:
-        print(f"✅ ایمیل با موفقیت به {receiver_email} ارسال شد!")
+        print(f"✅ ایمیل روزانه با موفقیت به {receiver_email} ارسال شد!")
     else:
-        print(f"❌ ارسال ایمیل ناموفق بود. خطا: {error}")
+        print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {error}")
+
+    # --- بخش جدید: اگه امروز پنجشنبه است، ایمیل خلاصه‌ی هفتگی رو هم جداگانه بفرست ---
+    if is_thursday():
+        print("\n📅 امروز پنجشنبه است، در حال ساخت گزارش هفتگی...")
+        weekly_text = build_weekly_summary(symbols, new_series)
+        print(weekly_text)
+
+        weekly_success, weekly_error = send_email(
+            subject="📅 خلاصه‌ی هفتگی ربات فارکس",
+            body=weekly_text,
+            sender=sender_email,
+            password=app_password,
+            receiver=receiver_email
+        )
+
+        if weekly_success:
+            print(f"✅ ایمیل خلاصه‌ی هفتگی هم با موفقیت ارسال شد!")
+        else:
+            print(f"❌ ارسال ایمیل هفتگی ناموفق بود. خطا: {weekly_error}")
 
 
 if __name__ == "__main__":
