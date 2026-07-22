@@ -385,7 +385,7 @@ def main():
         print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {error}")
 
     # --- بخش جدید: اگه امروز پنجشنبه است، ایمیل خلاصه‌ی هفتگی رو هم جداگانه بفرست ---
-    if true:
+    if True:
         print("\n📅 امروز پنجشنبه است، در حال ساخت گزارش هفتگی...")
         weekly_text = build_weekly_summary(symbols, new_series)
         print(weekly_text)
