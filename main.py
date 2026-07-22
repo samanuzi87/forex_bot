@@ -1,10 +1,10 @@
 """
-ربات تحلیل‌گر فارکس - مرحله ۸: افزودن گزارش هفتگی (پنجشنبه‌ها، ایمیل جداگانه)
+ربات تحلیل‌گر فارکس - مرحله ۹: افزودن ارسال گزارش به تلگرام (علاوه‌بر ایمیل)
 این اسکریپت:
 1) صندوق ورودی رو برای درخواست تغییر نماد (SELECT SYMBOLS) چک می‌کنه.
-2) قیمت لحظه‌ای نمادها رو می‌گیره، تحلیل می‌کنه، نمودار می‌سازه، گزارش روزانه می‌فرسته.
-3) اگه امروز پنجشنبه باشه، یک ایمیل کاملاً جداگانه با خلاصه‌ی هفتگی (کمترین،
-   بیشترین، میانگین، درصد تغییر ۷ روز اخیر) هم می‌فرسته.
+2) قیمت لحظه‌ای نمادها رو می‌گیره، تحلیل می‌کنه، نمودار می‌سازه.
+3) گزارش روزانه رو هم با ایمیل، هم با تلگرام می‌فرسته.
+4) پنجشنبه‌ها، گزارش هفتگی رو هم از هر دو مسیر (ایمیل + تلگرام) می‌فرسته.
 """
 
 import json
@@ -242,19 +242,14 @@ def build_report_text(symbols, api_key, history, series):
 
 
 # ---------------------------------------------------------------
-# بخش جدید: گزارش هفتگی (پنجشنبه‌ها)
+# گزارش هفتگی (پنجشنبه‌ها)
 # ---------------------------------------------------------------
 
 def is_thursday():
-    """پنجشنبه در پایتون روز شماره ۳ هفته است (دوشنبه=۰)."""
     return datetime.now().weekday() == 3
 
 
 def build_weekly_summary(symbols, series):
-    """
-    برای هر نماد، آمار ۷ روز اخیر رو از price_series.json محاسبه می‌کنه:
-    کمترین، بیشترین، میانگین، و درصد تغییر از اول تا آخر هفته.
-    """
     lines = []
     lines.append(f"📅 خلاصه‌ی هفتگی ربات فارکس - {datetime.now().strftime('%Y-%m-%d')}")
     lines.append("=" * 50)
@@ -333,24 +328,85 @@ def send_email(subject, body, sender, password, receiver, image_paths=None):
             return False, f"روش اول (پورت 465): {first_error}\nروش دوم (پورت 587): {second_error}"
 
 
+# ---------------------------------------------------------------
+# بخش جدید: ارسال پیام و عکس به تلگرام
+# ---------------------------------------------------------------
+
+def send_telegram_message(token, chat_id, text):
+    """
+    یک پیام متنی به چت تلگرام می‌فرسته.
+    چون تلگرام محدودیت طول پیام داره (۴۰۹۶ کاراکتر)، اگه متن خیلی طولانی بود، قطعش می‌کنیم.
+    """
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    text = text[:4000]  # ایمنی در برابر پیام‌های خیلی طولانی
+    try:
+        response = requests.post(url, data={"chat_id": chat_id, "text": text}, timeout=15)
+        if response.status_code == 200:
+            return True, None
+        return False, f"کد وضعیت: {response.status_code} - {response.text}"
+    except Exception as e:
+        return False, str(e)
+
+
+def send_telegram_photo(token, chat_id, photo_path, caption=""):
+    """یک تصویر (مثلا نمودار) رو به چت تلگرام می‌فرسته."""
+    url = f"https://api.telegram.org/bot{token}/sendPhoto"
+    try:
+        with open(photo_path, "rb") as f:
+            files = {"photo": f}
+            data = {"chat_id": chat_id, "caption": caption[:1024]}
+            response = requests.post(url, data=data, files=files, timeout=20)
+        if response.status_code == 200:
+            return True, None
+        return False, f"کد وضعیت: {response.status_code} - {response.text}"
+    except Exception as e:
+        return False, str(e)
+
+
+def send_telegram_report(token, chat_id, text, image_paths=None):
+    """
+    گزارش رو به تلگرام می‌فرسته: اول متن، بعد هر کدوم از نمودارها به‌عنوان عکس جدا.
+    """
+    image_paths = image_paths or []
+
+    text_ok, text_error = send_telegram_message(token, chat_id, text)
+
+    photo_errors = []
+    for img_path in image_paths:
+        symbol_name = os.path.splitext(os.path.basename(img_path))[0].replace("_", "/")
+        photo_ok, photo_error = send_telegram_photo(token, chat_id, img_path, caption=symbol_name)
+        if not photo_ok:
+            photo_errors.append(f"{symbol_name}: {photo_error}")
+
+    if not text_ok:
+        return False, f"ارسال متن ناموفق: {text_error}"
+    if photo_errors:
+        return False, "خطا در ارسال بعضی عکس‌ها: " + " | ".join(photo_errors)
+    return True, None
+
+
 def main():
     config = load_symbols_config()
     api_key = get_required_env("TWELVE_DATA_API_KEY")
     sender_email = get_required_env("GMAIL_SENDER_EMAIL")
     app_password = get_required_env("GMAIL_APP_PASSWORD")
     receiver_email = get_required_env("GMAIL_RECEIVER_EMAIL")
+    telegram_token = get_required_env("TELEGRAM_BOT_TOKEN")
+    telegram_chat_id = get_required_env("TELEGRAM_CHAT_ID")
 
     config, updated_symbols = check_symbol_selection_email(config, sender_email, app_password)
 
     if updated_symbols:
         print(f"✅ نمادها طبق درخواست ایمیلی به‌روزرسانی شدن: {', '.join(updated_symbols)}")
+        confirm_text = f"نمادهای جدید ثبت شد:\n\n{chr(10).join(updated_symbols)}\n\nاز فردا گزارش‌ها بر همین اساس ارسال می‌شن."
         send_email(
             subject="✅ نمادهای شما به‌روزرسانی شد",
-            body=f"نمادهای جدید ثبت شد:\n\n{chr(10).join(updated_symbols)}\n\nاز فردا گزارش‌ها بر همین اساس ارسال می‌شن.",
+            body=confirm_text,
             sender=sender_email,
             password=app_password,
             receiver=receiver_email
         )
+        send_telegram_message(telegram_token, telegram_chat_id, "✅ " + confirm_text)
 
     if not config.get("symbols"):
         config["symbols"] = ["EUR/USD", "XAU/USD"]
@@ -370,7 +426,7 @@ def main():
     save_json_file(new_series, SERIES_FILE)
 
     print("\n📧 در حال ارسال گزارش روزانه با ایمیل...")
-    success, error = send_email(
+    email_success, email_error = send_email(
         subject="📊 گزارش روزانه ربات فارکس",
         body=report_text,
         sender=sender_email,
@@ -378,30 +434,42 @@ def main():
         receiver=receiver_email,
         image_paths=chart_paths
     )
-
-    if success:
+    if email_success:
         print(f"✅ ایمیل روزانه با موفقیت به {receiver_email} ارسال شد!")
     else:
-        print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {error}")
+        print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {email_error}")
 
-    # --- بخش جدید: اگه امروز پنجشنبه است، ایمیل خلاصه‌ی هفتگی رو هم جداگانه بفرست ---
+    print("\n📲 در حال ارسال گزارش روزانه به تلگرام...")
+    tg_success, tg_error = send_telegram_report(telegram_token, telegram_chat_id, report_text, chart_paths)
+    if tg_success:
+        print("✅ گزارش روزانه با موفقیت به تلگرام ارسال شد!")
+    else:
+        print(f"❌ ارسال گزارش تلگرام ناموفق بود. خطا: {tg_error}")
+
     if is_thursday():
         print("\n📅 امروز پنجشنبه است، در حال ساخت گزارش هفتگی...")
         weekly_text = build_weekly_summary(symbols, new_series)
         print(weekly_text)
 
-        weekly_success, weekly_error = send_email(
+        weekly_email_success, weekly_email_error = send_email(
             subject="📅 خلاصه‌ی هفتگی ربات فارکس",
             body=weekly_text,
             sender=sender_email,
             password=app_password,
             receiver=receiver_email
         )
-
-        if weekly_success:
-            print(f"✅ ایمیل خلاصه‌ی هفتگی هم با موفقیت ارسال شد!")
+        if weekly_email_success:
+            print("✅ ایمیل خلاصه‌ی هفتگی هم با موفقیت ارسال شد!")
         else:
-            print(f"❌ ارسال ایمیل هفتگی ناموفق بود. خطا: {weekly_error}")
+            print(f"❌ ارسال ایمیل هفتگی ناموفق بود. خطا: {weekly_email_error}")
+
+        weekly_tg_success, weekly_tg_error = send_telegram_message(
+            telegram_token, telegram_chat_id, weekly_text
+        )
+        if weekly_tg_success:
+            print("✅ خلاصه‌ی هفتگی هم با موفقیت به تلگرام ارسال شد!")
+        else:
+            print(f"❌ ارسال خلاصه‌ی هفتگی به تلگرام ناموفق بود. خطا: {weekly_tg_error}")
 
 
 if __name__ == "__main__":
