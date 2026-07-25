@@ -1,10 +1,13 @@
 """
-ربات تحلیل‌گر فارکس - مرحله ۹: افزودن ارسال گزارش به تلگرام (علاوه‌بر ایمیل)
+ربات تحلیل‌گر فارکس - مرحله ۱۰: افزودن منوی دکمه‌ای تلگرام برای تغییر تنظیمات
 این اسکریپت:
 1) صندوق ورودی رو برای درخواست تغییر نماد (SELECT SYMBOLS) چک می‌کنه.
 2) قیمت لحظه‌ای نمادها رو می‌گیره، تحلیل می‌کنه، نمودار می‌سازه.
-3) گزارش روزانه رو هم با ایمیل، هم با تلگرام می‌فرسته.
-4) پنجشنبه‌ها، گزارش هفتگی رو هم از هر دو مسیر (ایمیل + تلگرام) می‌فرسته.
+3) گزارش روزانه رو با ایمیل و تلگرام (همراه با دکمه‌ی منوی تنظیمات) می‌فرسته.
+4) در روزی که کاربر انتخاب کرده (پیش‌فرض پنجشنبه)، گزارش هفتگی هم می‌فرسته.
+
+نکته: تغییر واقعی نمادها/روز گزارش هفتگی از طریق دکمه‌ها توسط فایل جداگانه‌ی
+telegram_handler.py انجام می‌شه که با زمان‌بندی جدا (هر ۱۰ دقیقه) اجرا می‌شه.
 """
 
 import json
@@ -29,12 +32,18 @@ SERIES_FILE = "price_series.json"
 MAX_HISTORY_POINTS = 30
 CHARTS_DIR = "charts"
 SYMBOLS_FILE = "config.json"
+DEFAULT_WEEKLY_WEEKDAY = 3  # پنجشنبه (دوشنبه=۰ در پایتون)
 
 SYMBOL_CATALOG = [
     "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
     "AUD/USD", "USD/CAD", "NZD/USD", "EUR/GBP",
     "EUR/JPY", "XAU/USD", "XAG/USD", "USD/TRY",
 ]
+
+WEEKDAY_NAMES_FA = {
+    5: "شنبه", 6: "یکشنبه", 0: "دوشنبه", 1: "سه‌شنبه",
+    2: "چهارشنبه", 3: "پنجشنبه", 4: "جمعه",
+}
 
 
 def load_symbols_config(path=SYMBOLS_FILE):
@@ -70,7 +79,7 @@ def get_required_env(name):
 
 
 # ---------------------------------------------------------------
-# انتخاب نماد از طریق پاسخ ایمیل
+# انتخاب نماد از طریق پاسخ ایمیل (روش قدیمی، همچنان فعال)
 # ---------------------------------------------------------------
 
 def check_symbol_selection_email(config, sender_email, app_password):
@@ -137,9 +146,10 @@ def build_symbol_catalog_text(current_symbols):
         marker = "  ✅ (انتخاب شده)" if symbol in current_symbols else ""
         lines.append(f"{i}. {symbol}{marker}")
     lines.append("")
-    lines.append("برای تغییر نمادهای مورد نظرت:")
+    lines.append("برای تغییر نمادهای مورد نظرت از طریق ایمیل:")
     lines.append("یک ایمیل جدید با موضوع دقیق SELECT SYMBOLS بفرست")
     lines.append("و در متنش شماره‌ی نمادهای دلخواه رو با ویرگول جدا کن، مثلا: 1, 4, 10")
+    lines.append("(یا راحت‌تر: از دکمه‌های تلگرام پایین همین گزارش استفاده کن)")
     return "\n".join(lines)
 
 
@@ -242,11 +252,12 @@ def build_report_text(symbols, api_key, history, series):
 
 
 # ---------------------------------------------------------------
-# گزارش هفتگی (پنجشنبه‌ها)
+# گزارش هفتگی (روز قابل‌انتخاب، پیش‌فرض پنجشنبه)
 # ---------------------------------------------------------------
 
-def is_thursday():
-    return datetime.now().weekday() == 3
+def is_weekly_report_day(config):
+    target_day = config.get("weekly_report_weekday", DEFAULT_WEEKLY_WEEKDAY)
+    return datetime.now().weekday() == target_day
 
 
 def build_weekly_summary(symbols, series):
@@ -329,18 +340,25 @@ def send_email(subject, body, sender, password, receiver, image_paths=None):
 
 
 # ---------------------------------------------------------------
-# بخش جدید: ارسال پیام و عکس به تلگرام
+# ارسال پیام/عکس به تلگرام (شامل دکمه‌های شیشه‌ای)
 # ---------------------------------------------------------------
 
-def send_telegram_message(token, chat_id, text):
-    """
-    یک پیام متنی به چت تلگرام می‌فرسته.
-    چون تلگرام محدودیت طول پیام داره (۴۰۹۶ کاراکتر)، اگه متن خیلی طولانی بود، قطعش می‌کنیم.
-    """
+def build_menu_keyboard():
+    """دکمه‌های شیشه‌ای منوی اصلی که پایین گزارش روزانه نشون داده می‌شن."""
+    return [
+        [{"text": "🔄 تغییر نمادها", "callback_data": "menu_symbols"}],
+        [{"text": "📅 تغییر روز گزارش هفتگی", "callback_data": "menu_weekday"}],
+    ]
+
+
+def send_telegram_message(token, chat_id, text, keyboard=None):
     url = f"https://api.telegram.org/bot{token}/sendMessage"
-    text = text[:4000]  # ایمنی در برابر پیام‌های خیلی طولانی
+    text = text[:4000]
+    payload = {"chat_id": chat_id, "text": text}
+    if keyboard:
+        payload["reply_markup"] = json.dumps({"inline_keyboard": keyboard})
     try:
-        response = requests.post(url, data={"chat_id": chat_id, "text": text}, timeout=15)
+        response = requests.post(url, data=payload, timeout=15)
         if response.status_code == 200:
             return True, None
         return False, f"کد وضعیت: {response.status_code} - {response.text}"
@@ -349,7 +367,6 @@ def send_telegram_message(token, chat_id, text):
 
 
 def send_telegram_photo(token, chat_id, photo_path, caption=""):
-    """یک تصویر (مثلا نمودار) رو به چت تلگرام می‌فرسته."""
     url = f"https://api.telegram.org/bot{token}/sendPhoto"
     try:
         with open(photo_path, "rb") as f:
@@ -363,13 +380,10 @@ def send_telegram_photo(token, chat_id, photo_path, caption=""):
         return False, str(e)
 
 
-def send_telegram_report(token, chat_id, text, image_paths=None):
-    """
-    گزارش رو به تلگرام می‌فرسته: اول متن، بعد هر کدوم از نمودارها به‌عنوان عکس جدا.
-    """
+def send_telegram_report(token, chat_id, text, image_paths=None, keyboard=None):
     image_paths = image_paths or []
 
-    text_ok, text_error = send_telegram_message(token, chat_id, text)
+    text_ok, text_error = send_telegram_message(token, chat_id, text, keyboard=keyboard)
 
     photo_errors = []
     for img_path in image_paths:
@@ -440,14 +454,18 @@ def main():
         print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {email_error}")
 
     print("\n📲 در حال ارسال گزارش روزانه به تلگرام...")
-    tg_success, tg_error = send_telegram_report(telegram_token, telegram_chat_id, report_text, chart_paths)
+    menu_keyboard = build_menu_keyboard()
+    tg_success, tg_error = send_telegram_report(
+        telegram_token, telegram_chat_id, report_text, chart_paths, keyboard=menu_keyboard
+    )
     if tg_success:
-        print("✅ گزارش روزانه با موفقیت به تلگرام ارسال شد!")
+        print("✅ گزارش روزانه (همراه با دکمه‌های منو) با موفقیت به تلگرام ارسال شد!")
     else:
         print(f"❌ ارسال گزارش تلگرام ناموفق بود. خطا: {tg_error}")
 
-    if is_thursday():
-        print("\n📅 امروز پنجشنبه است، در حال ساخت گزارش هفتگی...")
+    if is_weekly_report_day(config):
+        target_day_name = WEEKDAY_NAMES_FA.get(config.get("weekly_report_weekday", DEFAULT_WEEKLY_WEEKDAY), "")
+        print(f"\n📅 امروز {target_day_name} است، در حال ساخت گزارش هفتگی...")
         weekly_text = build_weekly_summary(symbols, new_series)
         print(weekly_text)
 
