@@ -188,6 +188,7 @@ def main():
 
     if not updates:
         print("پیام یا کلیک جدیدی برای پردازش وجود نداشت.")
+        save_json(state, STATE_FILE)  # فایل رو حتی بدون تغییر هم می‌سازیم/ذخیره می‌کنیم
         return
 
     for update in updates:
