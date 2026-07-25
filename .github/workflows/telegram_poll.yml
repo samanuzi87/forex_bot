@@ -1,0 +1,36 @@
+name: Telegram Button Handler
+
+on:
+  schedule:
+    # هر ۱۰ دقیقه یک‌بار اجرا می‌شه تا ببینه دکمه‌ای زده شده یا نه
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+jobs:
+  handle-buttons:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install requests
+
+      - name: Handle Telegram buttons
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+        run: python telegram_handler.py
+
+      - name: Commit updated settings back to repo
+        run: |
+          git config --global user.name "forex-bot"
+          git config --global user.email "forex-bot@users.noreply.github.com"
+          git add config.json telegram_state.json
+          git diff --quiet && git diff --staged --quiet || git commit -m "Update settings from Telegram buttons"
+          git push
