@@ -2,16 +2,23 @@
   "symbols": [
     "EUR/USD",
     "USD/JPY",
-    "NZD/USD",
     "USD/CHF",
-    "USD/CAD",
     "GBP/USD",
     "USD/TRY",
     "XAG/USD",
     "EUR/GBP",
-    "EUR/JPY",
-    "AUD/USD"
+    "AUD/USD",
+    "EUR/JPY"
   ],
   "symbols_confirmed": true,
-  "weekly_report_weekday": 3
+  "weekly_report_weekday": 3,
+  "chart_file_ids": {
+    "EUR_USD": "AgACAgQAAxkDAANVamXtewH_ucovA5rJc-FKYxW0QrkAAvENaxsUbzFT8XoycfCsv5wBAAMCAAN4AAM9BA",
+    "USD_JPY": "AgACAgQAAxkDAANWamXtfBDFh0Pu5i2M0WBrVM2t7ngAAvINaxsUbzFTRFKCxWgPiVMBAAMCAAN4AAM9BA",
+    "USD_CHF": "AgACAgQAAxkDAANXamXtfaQICWwiD3B1WWyJLF_BcrAAAvMNaxsUbzFTA48ED-b2f4cBAAMCAAN4AAM9BA",
+    "GBP_USD": "AgACAgQAAxkDAANYamXtfoITj0TGIy_O2SUtY0vTW9wAAvQNaxsUbzFTCWKSGQbVD_ABAAMCAAN4AAM9BA",
+    "USD_TRY": "AgACAgQAAxkDAANZamXtfzVQbn6YvlSgaGNw7C6PsVsAAvUNaxsUbzFTB0Awq7R3yP4BAAMCAAN4AAM9BA",
+    "AUD_USD": "AgACAgQAAxkDAANaamXtgOGMD2zk-D--xi2I9SkhkwEAAvYNaxsUbzFTt1-avZk0wWYBAAMCAAN4AAM9BA"
+  },
+  "last_daily_message_id": 91
 }
