@@ -1,7 +1,18 @@
 {
   "symbols": [
     "EUR/USD",
-    "XAU/USD"
+    "XAU/USD",
+    "USD/JPY",
+    "NZD/USD",
+    "USD/CHF",
+    "USD/CAD",
+    "GBP/USD",
+    "USD/TRY",
+    "XAG/USD",
+    "EUR/GBP",
+    "EUR/JPY",
+    "AUD/USD"
   ],
+  "symbols_confirmed": true,
   "weekly_report_weekday": 5
 }
