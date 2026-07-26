@@ -1,7 +1,6 @@
 {
   "symbols": [
     "EUR/USD",
-    "XAU/USD",
     "USD/JPY",
     "NZD/USD",
     "USD/CHF",
@@ -14,5 +13,5 @@
     "AUD/USD"
   ],
   "symbols_confirmed": true,
-  "weekly_report_weekday": 5
+  "weekly_report_weekday": 3
 }
