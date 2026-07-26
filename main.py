@@ -399,6 +399,30 @@ def send_telegram_report(token, chat_id, text, image_paths=None, keyboard=None):
     return True, None
 
 
+def fetch_remote_config(url, token, fallback):
+    """
+    تنظیمات فعلی (نمادها، روز گزارش هفتگی) رو از سرور تلگرام (PythonAnywhere) می‌گیره.
+    اگه به هر دلیلی سرور در دسترس نبود، از نسخه‌ی محلی (fallback) استفاده می‌کنه
+    تا ربات هیچ‌وقت به‌طور کامل متوقف نشه.
+    """
+    try:
+        response = requests.get(f"{url}/config", params={"token": token}, timeout=15)
+        if response.status_code == 200:
+            return response.json()
+        print(f"⚠️ سرور تنظیمات پاسخ غیرمنتظره داد (کد {response.status_code})، از نسخه‌ی محلی استفاده می‌شود.")
+    except Exception as e:
+        print(f"⚠️ اتصال به سرور تنظیمات ناموفق بود: {e} — از نسخه‌ی محلی استفاده می‌شود.")
+    return fallback
+
+
+def push_remote_config(url, token, config):
+    """وقتی از طریق ایمیل نماد جدیدی ثبت می‌شه، همون رو به سرور PythonAnywhere هم می‌فرستیم تا هماهنگ بمونن."""
+    try:
+        requests.post(f"{url}/config", params={"token": token}, json=config, timeout=15)
+    except Exception as e:
+        print(f"⚠️ ارسال تنظیمات به سرور PythonAnywhere ناموفق بود: {e}")
+
+
 def main():
     config = load_symbols_config()
     api_key = get_required_env("TWELVE_DATA_API_KEY")
@@ -407,11 +431,18 @@ def main():
     receiver_email = get_required_env("GMAIL_RECEIVER_EMAIL")
     telegram_token = get_required_env("TELEGRAM_BOT_TOKEN")
     telegram_chat_id = get_required_env("TELEGRAM_CHAT_ID")
+    pa_url = get_required_env("PA_CONFIG_URL")  # مثلا: https://samanuzi87.pythonanywhere.com
+    pa_secret = get_required_env("PA_API_SECRET")
+
+    # قبل از هر چیز، آخرین تنظیمات (که ممکنه از طریق دکمه‌های تلگرام عوض شده باشن) رو می‌گیریم
+    config = fetch_remote_config(pa_url, pa_secret, fallback=config)
+    save_symbols_config(config)  # یه نسخه‌ی پشتیبان محلی هم نگه می‌داریم
 
     config, updated_symbols = check_symbol_selection_email(config, sender_email, app_password)
 
     if updated_symbols:
         print(f"✅ نمادها طبق درخواست ایمیلی به‌روزرسانی شدن: {', '.join(updated_symbols)}")
+        push_remote_config(pa_url, pa_secret, config)  # هماهنگ‌سازی با سرور تلگرام
         confirm_text = f"نمادهای جدید ثبت شد:\n\n{chr(10).join(updated_symbols)}\n\nاز فردا گزارش‌ها بر همین اساس ارسال می‌شن."
         send_email(
             subject="✅ نمادهای شما به‌روزرسانی شد",
