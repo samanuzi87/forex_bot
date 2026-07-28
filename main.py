@@ -1,18 +1,14 @@
 """
-ربات تحلیل‌گر فارکس - مرحله ۱۱: پاک کردن پیام قبلی + دکمه‌ی جدا برای هر نمودار
-تغییرات نسبت به نسخه‌ی قبل:
-1) دیگه دکمه‌های «تغییر نماد» و «تغییر روز هفتگی» زیر گزارش نیستن (این دو از طریق
-   دستورات همیشگی /symbols و /weekday در خود تلگرام در دسترسن - در telegram_server.py).
-2) قبل از فرستادن گزارش جدید (روزانه یا هفتگی)، پیام قبلی همون نوع پاک می‌شه.
-3) عکس نمودارها دیگه خودکار همه با هم فرستاده نمی‌شن؛ به‌جاش یک پیام با یک دکمه‌ی
-   جدا برای هر نماد فرستاده می‌شه؛ با زدن دکمه، همون لحظه نمودار همون نماد میاد.
+ربات تحلیل‌گر فارکس - مرحله ۱۱: پشتیبانی چندزبانه + حذف تغییر نماد از ایمیل
+این اسکریپت:
+1) تنظیمات (نمادها، روز هفتگی، زبان) رو از سرور تلگرام (PythonAnywhere) می‌گیره.
+2) قیمت لحظه‌ای نمادها رو می‌گیره، تحلیل می‌کنه، نمودار (به زبان انتخابی) می‌سازه.
+3) گزارش رو با ایمیل (فقط متن + عکس، بدون قابلیت پاسخ‌دهی) و تلگرام می‌فرسته.
+4) توی تلگرام: پیام قبلی رو پاک می‌کنه، برای هر نماد یه دکمه‌ی نمودار جدا می‌ذاره.
 """
 
 import json
 import os
-import re
-import imaplib
-import email as email_lib
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
@@ -23,6 +19,9 @@ from datetime import datetime, timedelta
 import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
+
+from translations import t, weekday_name, RTL_LANGUAGES, LANGUAGE_NAMES, SUPPORTED_LANGUAGES
 
 ALERT_THRESHOLD_PERCENT = 0.5
 HISTORY_FILE = "price_history.json"
@@ -31,21 +30,7 @@ MAX_HISTORY_POINTS = 30
 CHARTS_DIR = "charts"
 SYMBOLS_FILE = "config.json"
 DEFAULT_WEEKLY_WEEKDAY = 3
-
-SYMBOL_CATALOG = [
-    "EUR/USD", "GBP/USD", "USD/JPY", "USD/CHF",
-    "AUD/USD", "USD/CAD", "NZD/USD", "EUR/GBP",
-    "EUR/JPY", "XAU/USD", "XAG/USD", "USD/TRY",
-]
-
-WEEKDAY_NAMES_FA = {
-    5: "شنبه", 6: "یکشنبه", 0: "دوشنبه", 1: "سه‌شنبه",
-    2: "چهارشنبه", 3: "پنجشنبه", 4: "جمعه",
-}
-
-
-def safe_name(symbol):
-    return symbol.replace("/", "_")
+DEFAULT_LANGUAGE = "fa"
 
 
 def load_symbols_config(path=SYMBOLS_FILE):
@@ -81,80 +66,29 @@ def get_required_env(name):
 
 
 # ---------------------------------------------------------------
-# انتخاب نماد از طریق پاسخ ایمیل (همچنان فعال، جدا از دکمه‌های تلگرام)
+# هماهنگی تنظیمات با سرور تلگرام (PythonAnywhere)
 # ---------------------------------------------------------------
 
-def check_symbol_selection_email(config, sender_email, app_password):
+def fetch_remote_config(url, token, fallback):
     try:
-        imap = imaplib.IMAP4_SSL("imap.gmail.com")
-        imap.login(sender_email, app_password)
-        imap.select("INBOX")
-
-        status, data = imap.search(None, '(UNSEEN SUBJECT "SELECT SYMBOLS")')
-        if status != "OK" or not data[0]:
-            imap.logout()
-            return config, None
-
-        email_ids = data[0].split()
-        latest_id = email_ids[-1]
-
-        status, msg_data = imap.fetch(latest_id, "(RFC822)")
-        raw_email = msg_data[0][1]
-        msg = email_lib.message_from_bytes(raw_email)
-
-        body = ""
-        if msg.is_multipart():
-            for part in msg.walk():
-                if part.get_content_type() == "text/plain":
-                    payload = part.get_payload(decode=True)
-                    if payload:
-                        body = payload.decode(errors="ignore")
-                        break
-        else:
-            payload = msg.get_payload(decode=True)
-            if payload:
-                body = payload.decode(errors="ignore")
-
-        numbers = [int(n) for n in re.findall(r"\d+", body)]
-        selected_symbols = [
-            SYMBOL_CATALOG[n - 1] for n in numbers
-            if 1 <= n <= len(SYMBOL_CATALOG)
-        ]
-        selected_symbols = list(dict.fromkeys(selected_symbols))
-
-        imap.store(latest_id, "+FLAGS", "\\Seen")
-        imap.logout()
-
-        if selected_symbols:
-            config["symbols"] = selected_symbols
-            config["symbols_confirmed"] = True
-            save_symbols_config(config)
-            return config, selected_symbols
-
-        return config, None
-
+        response = requests.get(f"{url}/config", params={"token": token}, timeout=15)
+        if response.status_code == 200:
+            return response.json()
+        print(f"⚠️ سرور تنظیمات پاسخ غیرمنتظره داد (کد {response.status_code})، از نسخه‌ی محلی استفاده می‌شود.")
     except Exception as e:
-        print(f"⚠️  خطا در بررسی ایمیل درخواست تغییر نماد: {e}")
-        return config, None
+        print(f"⚠️ اتصال به سرور تنظیمات ناموفق بود: {e} — از نسخه‌ی محلی استفاده می‌شود.")
+    return fallback
 
 
-def build_symbol_catalog_text(current_symbols):
-    lines = []
-    lines.append("")
-    lines.append("-" * 50)
-    lines.append("لیست نمادهای قابل انتخاب (یا از دستور /symbols توی تلگرام استفاده کن):")
-    lines.append("")
-    for i, symbol in enumerate(SYMBOL_CATALOG, start=1):
-        marker = "  ✅ (انتخاب شده)" if symbol in current_symbols else ""
-        lines.append(f"{i}. {symbol}{marker}")
-    lines.append("")
-    lines.append("برای تغییر از طریق ایمیل: یک ایمیل با موضوع SELECT SYMBOLS بفرست")
-    lines.append("و شماره‌ی نمادهای دلخواه رو با ویرگول جدا کن، مثلا: 1, 4, 10")
-    return "\n".join(lines)
+def push_remote_config(url, token, config):
+    try:
+        requests.post(f"{url}/config", params={"token": token}, json=config, timeout=15)
+    except Exception as e:
+        print(f"⚠️ ارسال تنظیمات به سرور PythonAnywhere ناموفق بود: {e}")
 
 
 # ---------------------------------------------------------------
-# گرفتن قیمت، تحلیل، نمودار
+# گرفتن قیمت، تحلیل
 # ---------------------------------------------------------------
 
 def get_price(symbol, api_key):
@@ -169,19 +103,19 @@ def get_price(symbol, api_key):
     return float(data["price"]), None
 
 
-def analyze_price(symbol, current_price, history):
+def analyze_price(symbol, current_price, history, lang):
     previous_price = history.get(symbol)
 
     if previous_price is None:
-        return "(اولین بار ثبت می‌شه، فردا مقایسه‌ش می‌کنیم)", False
+        return t(lang, "first_time_note"), False
 
     change_percent = ((current_price - previous_price) / previous_price) * 100
     sign = "+" if change_percent >= 0 else ""
-    change_text = f"تغییر نسبت به دفعه قبل: {sign}{change_percent:.2f}%"
+    change_text = f'{t(lang, "changed_from_last")}: {sign}{change_percent:.2f}%'
 
     is_alert = abs(change_percent) >= ALERT_THRESHOLD_PERCENT
     if is_alert:
-        change_text += " — تغییر قابل توجه!"
+        change_text += " — " + t(lang, "significant_change")
 
     return change_text, is_alert
 
@@ -195,7 +129,37 @@ def update_series(series, symbol, price):
     return series
 
 
-def build_chart(symbol, series):
+# ---------------------------------------------------------------
+# ساخت نمودار (با پشتیبانی از راست‌به‌چپ برای فارسی/عربی)
+# ---------------------------------------------------------------
+
+def prepare_chart_text(text, lang):
+    """
+    برای فارسی و عربی، حروف باید به‌هم بچسبن (Shape) و ترتیبشون درست بشه (Bidi)،
+    وگرنه matplotlib نمی‌تونه درست نشونشون بده. برای بقیه‌ی زبان‌ها نیازی به این کار نیست.
+    """
+    if lang not in RTL_LANGUAGES:
+        return text
+    try:
+        import arabic_reshaper
+        from bidi.algorithm import get_display
+        reshaped = arabic_reshaper.reshape(text)
+        return get_display(reshaped)
+    except Exception as e:
+        print(f"⚠️ آماده‌سازی متن راست‌به‌چپ ناموفق بود ({e})، متن اصلی استفاده می‌شود.")
+        return text
+
+
+def get_chart_font():
+    """اگه فونت مخصوص فارسی/عربی (Noto) نصب باشه، همون رو برمی‌گردونه، وگرنه فونت پیش‌فرض."""
+    for font_name in ["Noto Naskh Arabic", "Noto Sans Arabic", "Noto Sans"]:
+        matches = [f for f in fm.fontManager.ttflist if font_name.lower() in f.name.lower()]
+        if matches:
+            return font_name
+    return None
+
+
+def build_chart(symbol, series, lang):
     points = series.get(symbol, [])
 
     if len(points) < 2:
@@ -205,63 +169,65 @@ def build_chart(symbol, series):
     prices = [p["price"] for p in points]
 
     os.makedirs(CHARTS_DIR, exist_ok=True)
-    chart_path = os.path.join(CHARTS_DIR, f"{safe_name(symbol)}.png")
+    safe_name = symbol.replace("/", "_")
+    chart_path = os.path.join(CHARTS_DIR, f"{safe_name}.png")
+
+    title_text = prepare_chart_text(t(lang, "chart_title", symbol=symbol), lang)
+
+    rtl_font = get_chart_font() if lang in RTL_LANGUAGES else None
+    if rtl_font:
+        plt.rcParams["font.family"] = rtl_font
 
     plt.figure(figsize=(7, 3.2))
     plt.plot(times, prices, marker="o", linewidth=2, color="#2b4a6f")
-    plt.title(f"روند قیمت {symbol}")
+    plt.title(title_text)
     plt.xticks(rotation=45, ha="right", fontsize=7)
     plt.yticks(fontsize=8)
     plt.tight_layout()
     plt.savefig(chart_path, dpi=120)
     plt.close()
 
+    plt.rcParams["font.family"] = "DejaVu Sans"  # برگردوندن فونت پیش‌فرض برای نمودارهای بعدی
     return chart_path
 
 
-def build_report_text(symbols, api_key, history, series):
+def build_report_text(symbols, api_key, history, series, lang):
     lines = []
-    lines.append(f"گزارش قیمت نمادها - {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+    lines.append(f'{t(lang, "report_title")} - {datetime.now().strftime("%Y-%m-%d %H:%M")}')
     lines.append("=" * 50)
 
     new_history = dict(history)
-    chart_paths = {}  # symbol -> path
+    chart_paths = {}
 
     for symbol in symbols:
         price, error = get_price(symbol, api_key)
 
         if error:
-            lines.append(f"❌ {symbol}: خطا -> {error}")
+            lines.append(f"❌ {symbol}: {error}")
             continue
 
-        change_text, is_alert = analyze_price(symbol, price, history)
+        change_text, is_alert = analyze_price(symbol, price, history, lang)
         icon = "⚠️ " if is_alert else "✅"
         lines.append(f"{icon} {symbol}: {price}  ({change_text})")
 
         new_history[symbol] = price
         update_series(series, symbol, price)
 
-        chart_path = build_chart(symbol, series)
+        chart_path = build_chart(symbol, series, lang)
         if chart_path:
             chart_paths[symbol] = chart_path
 
-    lines.append(build_symbol_catalog_text(symbols))
-
     return "\n".join(lines), new_history, series, chart_paths
 
-
-# ---------------------------------------------------------------
-# گزارش هفتگی
-# ---------------------------------------------------------------
 
 def is_weekly_report_day(config):
     target_day = config.get("weekly_report_weekday", DEFAULT_WEEKLY_WEEKDAY)
     return datetime.now().weekday() == target_day
 
 
-def build_weekly_summary(symbols, series):
+def build_weekly_summary(symbols, series, lang):
     lines = []
-    lines.append(f"📅 خلاصه‌ی هفتگی ربات فارکس - {datetime.now().strftime('%Y-%m-%d')}")
+    lines.append(f'📅 {t(lang, "weekly_title")} - {datetime.now().strftime("%Y-%m-%d")}')
     lines.append("=" * 50)
     lines.append("")
 
@@ -281,7 +247,7 @@ def build_weekly_summary(symbols, series):
         lines.append(f"🔹 {symbol}")
 
         if len(week_points) < 2:
-            lines.append("   داده‌ی کافی برای این هفته هنوز جمع نشده.")
+            lines.append(f'   {t(lang, "weekly_no_data")}')
             lines.append("")
             continue
 
@@ -294,17 +260,17 @@ def build_weekly_summary(symbols, series):
         change_percent = ((last_price - first_price) / first_price) * 100
         sign = "+" if change_percent >= 0 else ""
 
-        lines.append(f"   کمترین قیمت هفته: {min_price}")
-        lines.append(f"   بیشترین قیمت هفته: {max_price}")
-        lines.append(f"   میانگین قیمت هفته: {avg_price:.5f}")
-        lines.append(f"   تغییر از اول تا امروز: {sign}{change_percent:.2f}%")
+        lines.append(f'   {t(lang, "weekly_min")}: {min_price}')
+        lines.append(f'   {t(lang, "weekly_max")}: {max_price}')
+        lines.append(f'   {t(lang, "weekly_avg")}: {avg_price:.5f}')
+        lines.append(f'   {t(lang, "weekly_change")}: {sign}{change_percent:.2f}%')
         lines.append("")
 
     return "\n".join(lines)
 
 
 # ---------------------------------------------------------------
-# ارسال ایمیل (بدون تغییر - همچنان همه نمودارها رو پیوست می‌کنه)
+# ارسال ایمیل (فقط متن + عکس، بدون قابلیت پاسخ‌دهی)
 # ---------------------------------------------------------------
 
 def send_email(subject, body, sender, password, receiver, image_paths=None):
@@ -339,22 +305,53 @@ def send_email(subject, body, sender, password, receiver, image_paths=None):
 
 
 # ---------------------------------------------------------------
-# ارتباط با تلگرام (نسخه‌ی جدید: حذف پیام قبلی + آپلود نمودار برای گرفتن file_id)
+# ارتباط با تلگرام
 # ---------------------------------------------------------------
 
 def tg_request(token, method, payload=None, files=None):
     url = f"https://api.telegram.org/bot{token}/{method}"
-    try:
-        response = requests.post(url, data=payload or {}, files=files, timeout=20)
-        return response.json()
-    except Exception as e:
-        return {"ok": False, "description": str(e)}
+    response = requests.post(url, data=payload or {}, files=files, timeout=20)
+    return response.json()
 
 
 def delete_telegram_message(token, chat_id, message_id):
     if not message_id:
         return
-    tg_request(token, "deleteMessage", {"chat_id": chat_id, "message_id": message_id})
+    try:
+        tg_request(token, "deleteMessage", {"chat_id": chat_id, "message_id": message_id})
+    except Exception as e:
+        print(f"⚠️ حذف پیام قبلی ناموفق بود (شاید قبلاً پاک شده): {e}")
+
+
+def upload_chart_and_get_file_id(token, chat_id, photo_path):
+    """
+    عکس رو یه‌بار می‌فرسته تا شناسه‌ی داخلی تلگرامش (file_id) رو بگیره،
+    بعد فوراً همون پیام رو پاک می‌کنه تا چت شلوغ نشه.
+    """
+    try:
+        with open(photo_path, "rb") as f:
+            result = tg_request(token, "sendPhoto", {"chat_id": chat_id}, files={"photo": f})
+        if not result.get("ok"):
+            return None, str(result)
+        message_id = result["result"]["message_id"]
+        file_id = result["result"]["photo"][-1]["file_id"]
+        delete_telegram_message(token, chat_id, message_id)
+        return file_id, None
+    except Exception as e:
+        return None, str(e)
+
+
+def build_chart_picker_keyboard(symbols, lang):
+    rows, row = [], []
+    for symbol in symbols:
+        safe_symbol = symbol.replace("/", "_")
+        row.append({"text": t(lang, "chart_button", symbol=symbol), "callback_data": f"show_chart:{safe_symbol}"})
+        if len(row) == 2:
+            rows.append(row)
+            row = []
+    if row:
+        rows.append(row)
+    return rows
 
 
 def send_telegram_text(token, chat_id, text, keyboard=None):
@@ -362,45 +359,13 @@ def send_telegram_text(token, chat_id, text, keyboard=None):
     payload = {"chat_id": chat_id, "text": text}
     if keyboard:
         payload["reply_markup"] = json.dumps({"inline_keyboard": keyboard})
-    result = tg_request(token, "sendMessage", payload)
-    if result.get("ok"):
-        return True, result["result"]["message_id"], None
-    return False, None, result.get("description", "خطای نامشخص")
-
-
-def upload_chart_and_get_file_id(token, chat_id, chart_path):
-    """
-    نمودار رو یک‌بار می‌فرسته (فقط برای گرفتن شناسه‌ی داخلی تلگرام، file_id)،
-    و فوراً همون پیام رو پاک می‌کنه تا کاربر چیزی اضافه نبینه.
-    این file_id بعداً برای نمایش لحظه‌ای نمودار (با زدن دکمه) استفاده می‌شه.
-    """
-    with open(chart_path, "rb") as f:
-        files = {"photo": f}
-        result = tg_request(token, "sendPhoto", {"chat_id": chat_id}, files=files)
-
-    if not result.get("ok"):
-        return None, result.get("description", "خطای نامشخص")
-
-    message_id = result["result"]["message_id"]
-    photo_sizes = result["result"].get("photo", [])
-    file_id = photo_sizes[-1]["file_id"] if photo_sizes else None
-
-    delete_telegram_message(token, chat_id, message_id)
-
-    return file_id, None
-
-
-def build_chart_picker_keyboard(symbols):
-    """یک دکمه‌ی جدا برای هر نماد، دو تا دو تا توی هر ردیف."""
-    rows, row = [], []
-    for symbol in symbols:
-        row.append({"text": f"📈 {symbol}", "callback_data": f"show_chart:{safe_name(symbol)}"})
-        if len(row) == 2:
-            rows.append(row)
-            row = []
-    if row:
-        rows.append(row)
-    return rows
+    try:
+        result = tg_request(token, "sendMessage", payload)
+        if result.get("ok"):
+            return True, result["result"]["message_id"], None
+        return False, None, str(result)
+    except Exception as e:
+        return False, None, str(e)
 
 
 def main():
@@ -414,28 +379,20 @@ def main():
     pa_url = get_required_env("PA_CONFIG_URL")
     pa_secret = get_required_env("PA_API_SECRET")
 
-    # گرفتن آخرین تنظیمات (نمادها، روز هفتگی، شناسه‌ی آخرین پیام‌ها، file_id نمودارها)
-    try:
-        response = requests.get(f"{pa_url}/config", params={"token": pa_secret}, timeout=15)
-        if response.status_code == 200:
-            config = response.json()
-    except Exception as e:
-        print(f"⚠️ اتصال به سرور تنظیمات ناموفق بود: {e} — از نسخه‌ی محلی استفاده می‌شود.")
-
+    # همیشه اول آخرین تنظیمات (نماد، روز هفتگی، زبان) رو از سرور تلگرام می‌گیریم
+    config = fetch_remote_config(pa_url, pa_secret, fallback=config)
     save_symbols_config(config)
-
-    config, updated_symbols = check_symbol_selection_email(config, sender_email, app_password)
 
     if not config.get("symbols"):
         config["symbols"] = ["EUR/USD", "XAU/USD"]
-        save_symbols_config(config)
 
+    lang = config.get("language", DEFAULT_LANGUAGE)
     symbols = config["symbols"]
     history = load_json_file(HISTORY_FILE)
     series = load_json_file(SERIES_FILE)
 
     report_text, new_history, new_series, chart_paths = build_report_text(
-        symbols, api_key, history, series
+        symbols, api_key, history, series, lang
     )
 
     print(report_text)
@@ -443,73 +400,76 @@ def main():
     save_json_file(new_history, HISTORY_FILE)
     save_json_file(new_series, SERIES_FILE)
 
-    # --- ایمیل: بدون تغییر، مثل قبل همه‌ی نمودارها پیوست می‌شن ---
+    # --- ایمیل: فقط متن + عکس، بدون قابلیت پاسخ‌دهی ---
     print("\n📧 در حال ارسال گزارش روزانه با ایمیل...")
     email_success, email_error = send_email(
-        subject="📊 گزارش روزانه ربات فارکس",
+        subject=f'📊 {t(lang, "report_title")}',
         body=report_text,
         sender=sender_email,
         password=app_password,
         receiver=receiver_email,
         image_paths=list(chart_paths.values())
     )
-    print("✅ ایمیل ارسال شد" if email_success else f"❌ خطا در ایمیل: {email_error}")
-    if updated_symbols:
-        confirm_text = f"نمادهای جدید ثبت شد:\n\n{chr(10).join(updated_symbols)}"
-        send_email("✅ نمادهای شما به‌روزرسانی شد", confirm_text, sender_email, app_password, receiver_email)
+    if email_success:
+        print(f"✅ ایمیل روزانه با موفقیت به {receiver_email} ارسال شد!")
+    else:
+        print(f"❌ ارسال ایمیل روزانه ناموفق بود. خطا: {email_error}")
 
-    # --- تلگرام: پاک کردن پیام قبلی، آپلود نمودارها برای گرفتن file_id، فرستادن پیام جدید ---
+    # --- تلگرام: پاک کردن پیام قبلی، آپلود موقت نمودارها برای گرفتن file_id، ارسال پیام با دکمه‌ی هر نماد ---
     print("\n📲 در حال آماده‌سازی گزارش تلگرام...")
+    delete_telegram_message(telegram_token, telegram_chat_id, config.get("last_daily_message_id"))
 
-    old_daily_message_id = config.get("last_daily_message_id")
-    delete_telegram_message(telegram_token, telegram_chat_id, old_daily_message_id)
-
-    chart_file_ids = config.get("chart_file_ids", {})
+    chart_file_ids = {}
     for symbol, path in chart_paths.items():
-        file_id, upload_error = upload_chart_and_get_file_id(telegram_token, telegram_chat_id, path)
+        file_id, err = upload_chart_and_get_file_id(telegram_token, telegram_chat_id, path)
         if file_id:
-            chart_file_ids[safe_name(symbol)] = file_id
+            chart_file_ids[symbol.replace("/", "_")] = file_id
         else:
-            print(f"⚠️ آپلود نمودار {symbol} برای تلگرام ناموفق بود: {upload_error}")
-    config["chart_file_ids"] = chart_file_ids
+            print(f"⚠️ گرفتن file_id برای {symbol} ناموفق بود: {err}")
 
-    keyboard = build_chart_picker_keyboard(symbols)
-    tg_success, new_message_id, tg_error = send_telegram_text(
+    keyboard = build_chart_picker_keyboard(symbols, lang)
+    tg_ok, new_message_id, tg_error = send_telegram_text(
         telegram_token, telegram_chat_id, report_text, keyboard=keyboard
     )
-    if tg_success:
-        print("✅ گزارش روزانه با موفقیت به تلگرام ارسال شد!")
-        config["last_daily_message_id"] = new_message_id
+    if tg_ok:
+        print("✅ گزارش روزانه (همراه با دکمه‌ی هر نماد) با موفقیت به تلگرام ارسال شد!")
     else:
         print(f"❌ ارسال گزارش تلگرام ناموفق بود. خطا: {tg_error}")
 
-    # --- گزارش هفتگی (در صورت رسیدن روزش) ---
+    config["last_daily_message_id"] = new_message_id
+    config["chart_file_ids"] = chart_file_ids
+
+    # --- گزارش هفتگی (روز قابل‌تنظیم) ---
     if is_weekly_report_day(config):
-        target_day_name = WEEKDAY_NAMES_FA.get(config.get("weekly_report_weekday", DEFAULT_WEEKLY_WEEKDAY), "")
-        print(f"\n📅 امروز {target_day_name} است، در حال ساخت گزارش هفتگی...")
-        weekly_text = build_weekly_summary(symbols, new_series)
+        day_name = weekday_name(lang, config.get("weekly_report_weekday", DEFAULT_WEEKLY_WEEKDAY))
+        print(f"\n📅 امروز {day_name} است، در حال ساخت گزارش هفتگی...")
+        weekly_text = build_weekly_summary(symbols, new_series, lang)
         print(weekly_text)
 
-        send_email("📅 خلاصه‌ی هفتگی ربات فارکس", weekly_text, sender_email, app_password, receiver_email)
+        weekly_email_success, weekly_email_error = send_email(
+            subject=f'📅 {t(lang, "weekly_title")}',
+            body=weekly_text,
+            sender=sender_email,
+            password=app_password,
+            receiver=receiver_email
+        )
+        if weekly_email_success:
+            print("✅ ایمیل خلاصه‌ی هفتگی هم با موفقیت ارسال شد!")
+        else:
+            print(f"❌ ارسال ایمیل هفتگی ناموفق بود. خطا: {weekly_email_error}")
 
-        old_weekly_message_id = config.get("last_weekly_message_id")
-        delete_telegram_message(telegram_token, telegram_chat_id, old_weekly_message_id)
-
-        weekly_success, weekly_message_id, weekly_error = send_telegram_text(
+        delete_telegram_message(telegram_token, telegram_chat_id, config.get("last_weekly_message_id"))
+        weekly_tg_ok, weekly_message_id, weekly_tg_error = send_telegram_text(
             telegram_token, telegram_chat_id, weekly_text
         )
-        if weekly_success:
+        if weekly_tg_ok:
             print("✅ خلاصه‌ی هفتگی هم با موفقیت به تلگرام ارسال شد!")
             config["last_weekly_message_id"] = weekly_message_id
         else:
-            print(f"❌ ارسال خلاصه‌ی هفتگی به تلگرام ناموفق بود. خطا: {weekly_error}")
+            print(f"❌ ارسال خلاصه‌ی هفتگی به تلگرام ناموفق بود. خطا: {weekly_tg_error}")
 
-    # --- در آخر، تنظیمات به‌روزشده (شناسه‌ی پیام‌ها + file_id نمودارها) رو به PythonAnywhere می‌فرستیم ---
-    try:
-        requests.post(f"{pa_url}/config", params={"token": pa_secret}, json=config, timeout=15)
-    except Exception as e:
-        print(f"⚠️ ارسال تنظیمات به سرور PythonAnywhere ناموفق بود: {e}")
-
+    # --- هماهنگ‌سازی نهایی تنظیمات (شناسه‌ی پیام‌ها، file_idها) با سرور تلگرام ---
+    push_remote_config(pa_url, pa_secret, config)
     save_symbols_config(config)
 
 
