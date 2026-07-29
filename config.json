@@ -1,14 +1,19 @@
 {
   "chart_file_ids": {
-    "EUR_USD": "AgACAgQAAxkDAAPEamifU8Sa_Y2anrgdEd-ka-Yb4D4AAgUOaxt3BEhTgsFPEz9eBsEBAAMCAAN4AAM9BA",
-    "USD_CHF": "AgACAgQAAxkDAAPFamifVOW0lqNHLgQJXaZd-f5EVmQAAgYOaxt3BEhTZxtSq4SvI-IBAAMCAAN4AAM9BA",
-    "USD_TRY": "AgACAgQAAxkDAAPGamifVRLrWrdpNqSuTaxea1XmCMQAAgcOaxt3BEhTd4z8OU-K4W0BAAMCAAN4AAM9BA",
-    "EUR_GBP": "AgACAgQAAxkDAAPHamifVhZHcbyyC4gjyH1mqxRII5gAAggOaxt3BEhTKu5BXgPGqyUBAAMCAAN4AAM9BA",
-    "AUD_USD": "AgACAgQAAxkDAAPIamifV2GU9OrHdn-AqR6BystG2nsAAgkOaxt3BEhTSWN9C4ami0EBAAMCAAN4AAM9BA",
-    "EUR_JPY": "AgACAgQAAxkDAAPJamifV4plnj3bAn9JiPL1WCrlpHYAAgoOaxt3BEhTI-IjGLiUajkBAAMCAAN4AAM9BA",
-    "GBP_USD": "AgACAgQAAxkDAAPKamifWML3adby1TB6xqeYo9eFeVwAAgsOaxt3BEhTbZ-aJNAKAQYBAAMCAAN4AAM9BA"
+    "EUR_USD": "AgACAgQAAxkDAAPkammfahRz-VW8Y4-AsGPKbJkt7FwAAjQNaxu0RUlT7UHw0sZ28dQBAAMCAAN4AAM9BA",
+    "USD_CHF": "AgACAgQAAxkDAAPlammfax5rFl38AzZbMfIvGEM3aqwAAjUNaxu0RUlT5_tQn1ddzAwBAAMCAAN4AAM9BA",
+    "USD_TRY": "AgACAgQAAxkDAAPmammfbHnOCGtAJ0JmBTLb1HAXK-IAAjYNaxu0RUlTAfQh-z3eIPgBAAMCAAN4AAM9BA",
+    "EUR_GBP": "AgACAgQAAxkDAAPnammfbYJQH7pzPb0LgH4gjlhMNfEAAjcNaxu0RUlTw_pvTD5iRfUBAAMCAAN4AAM9BA",
+    "AUD_USD": "AgACAgQAAxkDAAPoammfbq8MFiiGu_6D2g9EwsocqOwAAjgNaxu0RUlTEd-hOTkboIsBAAMCAAN4AAM9BA",
+    "EUR_JPY": "AgACAgQAAxkDAAPpammfbxJmsi2JPlBMygO2o0vBhK4AAjkNaxu0RUlTAAFHdVbq6MS3AQADAgADeAADPQQ",
+    "GBP_USD": "AgACAgQAAxkDAAPqammfcMT1q7yZ8Umc4RHLpzsgqW8AAjoNaxu0RUlTFCJH_IsCA04BAAMCAAN4AAM9BA"
   },
-  "last_daily_message_id": 203,
+  "language": "fa",
+  "last_daily_message_id": 236,
+  "subscribers": [
+    7461503310,
+    6884680317
+  ],
   "symbols": [
     "EUR/USD",
     "USD/CHF",
@@ -22,5 +27,9 @@
     "USD/CAD"
   ],
   "symbols_confirmed": true,
-  "weekly_report_weekday": 4
+  "weekly_report_weekday": 4,
+  "last_daily_message_ids": {
+    "7461503310": 236,
+    "6884680317": 237
+  }
 }
