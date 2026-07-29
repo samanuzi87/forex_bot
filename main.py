@@ -417,6 +417,12 @@ def main():
 
     # --- تلگرام: پاک کردن پیام قبلی، آپلود موقت نمودارها برای گرفتن file_id، ارسال پیام با دکمه‌ی هر نماد ---
     print("\n📲 در حال آماده‌سازی گزارش تلگرام...")
+
+    # لیست همه‌ی گیرنده‌ها: خود ادمین (تلگرام اصلی) + هرکسی که با /start عضو شده
+    subscribers = config.get("subscribers", [])
+    all_recipients = list(dict.fromkeys([telegram_chat_id] + subscribers))
+    print(f"👥 تعداد کل گیرنده‌های تلگرام: {len(all_recipients)}")
+
     delete_telegram_message(telegram_token, telegram_chat_id, config.get("last_daily_message_id"))
 
     chart_file_ids = {}
@@ -428,15 +434,23 @@ def main():
             print(f"⚠️ گرفتن file_id برای {symbol} ناموفق بود: {err}")
 
     keyboard = build_chart_picker_keyboard(symbols, lang)
-    tg_ok, new_message_id, tg_error = send_telegram_text(
-        telegram_token, telegram_chat_id, report_text, keyboard=keyboard
-    )
-    if tg_ok:
-        print("✅ گزارش روزانه (همراه با دکمه‌ی هر نماد) با موفقیت به تلگرام ارسال شد!")
-    else:
-        print(f"❌ ارسال گزارش تلگرام ناموفق بود. خطا: {tg_error}")
+    last_daily_message_ids = config.get("last_daily_message_ids", {})
 
-    config["last_daily_message_id"] = new_message_id
+    for recipient_id in all_recipients:
+        # برای هر گیرنده، اول پیام دیروزش رو پاک می‌کنیم (اگه داشته)
+        delete_telegram_message(telegram_token, recipient_id, last_daily_message_ids.get(str(recipient_id)))
+
+        tg_ok, new_message_id, tg_error = send_telegram_text(
+            telegram_token, recipient_id, report_text, keyboard=keyboard
+        )
+        if tg_ok:
+            print(f"✅ گزارش روزانه به گیرنده‌ی {recipient_id} ارسال شد!")
+            last_daily_message_ids[str(recipient_id)] = new_message_id
+        else:
+            print(f"❌ ارسال گزارش به گیرنده‌ی {recipient_id} ناموفق بود. خطا: {tg_error}")
+
+    config["last_daily_message_id"] = last_daily_message_ids.get(str(telegram_chat_id))
+    config["last_daily_message_ids"] = last_daily_message_ids
     config["chart_file_ids"] = chart_file_ids
 
     # --- گزارش هفتگی (روز قابل‌تنظیم) ---
@@ -459,14 +473,19 @@ def main():
             print(f"❌ ارسال ایمیل هفتگی ناموفق بود. خطا: {weekly_email_error}")
 
         delete_telegram_message(telegram_token, telegram_chat_id, config.get("last_weekly_message_id"))
-        weekly_tg_ok, weekly_message_id, weekly_tg_error = send_telegram_text(
-            telegram_token, telegram_chat_id, weekly_text
-        )
-        if weekly_tg_ok:
-            print("✅ خلاصه‌ی هفتگی هم با موفقیت به تلگرام ارسال شد!")
-            config["last_weekly_message_id"] = weekly_message_id
-        else:
-            print(f"❌ ارسال خلاصه‌ی هفتگی به تلگرام ناموفق بود. خطا: {weekly_tg_error}")
+        last_weekly_message_ids = config.get("last_weekly_message_ids", {})
+        for recipient_id in all_recipients:
+            delete_telegram_message(telegram_token, recipient_id, last_weekly_message_ids.get(str(recipient_id)))
+            weekly_tg_ok, weekly_message_id, weekly_tg_error = send_telegram_text(
+                telegram_token, recipient_id, weekly_text
+            )
+            if weekly_tg_ok:
+                print(f"✅ خلاصه‌ی هفتگی به گیرنده‌ی {recipient_id} ارسال شد!")
+                last_weekly_message_ids[str(recipient_id)] = weekly_message_id
+            else:
+                print(f"❌ ارسال خلاصه‌ی هفتگی به گیرنده‌ی {recipient_id} ناموفق بود. خطا: {weekly_tg_error}")
+        config["last_weekly_message_id"] = last_weekly_message_ids.get(str(telegram_chat_id))
+        config["last_weekly_message_ids"] = last_weekly_message_ids
 
     # --- هماهنگ‌سازی نهایی تنظیمات (شناسه‌ی پیام‌ها، file_idها) با سرور تلگرام ---
     push_remote_config(pa_url, pa_secret, config)
