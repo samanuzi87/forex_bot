@@ -1,19 +1,25 @@
 {
   "chart_file_ids": {
-    "EUR_USD": "AgACAgQAAxkDAAIBNmpslZVdRlE-3RC2rZ0292RPAjSIAALpDGsb5_BgUxUl9ynJRkDuAQADAgADeAADPQQ",
-    "USD_TRY": "AgACAgQAAxkDAAIBN2pslZY-i26MluNaQsDar2k8lL9TAALqDGsb5_BgUz7hbCY-AAE5wgEAAwIAA3gAAz0E",
-    "EUR_GBP": "AgACAgQAAxkDAAIBOGpslZcP3BF2WjuaKo9rzoogNz7jAALrDGsb5_BgU9BTn5-teyAiAQADAgADeAADPQQ",
-    "EUR_JPY": "AgACAgQAAxkDAAIBOWpslZghnqleVnaDE03w71RZhVdsAALsDGsb5_BgUzE7gjkFCk9pAQADAgADeAADPQQ",
-    "GBP_USD": "AgACAgQAAxkDAAIBOmpslZlVRXU-X2vDNGurmP0UVHCUAALtDGsb5_BgU4Ut3J5m1SJOAQADAgADeAADPQQ",
-    "USD_JPY": "AgACAgQAAxkDAAIBO2pslZtHbKu8GsnhZ1XtpPQNRbebAALuDGsb5_BgU38BbDSpVwABwQEAAwIAA3gAAz0E",
-    "USD_CHF": "AgACAgQAAxkDAAIBPGpslZz2ZBqSvFSoQ7Ym_nWo5O-PAALvDGsb5_BgU6ZWxfQLb2bUAQADAgADeAADPQQ"
+    "EUR_USD": "AgACAgQAAxkDAAIBRWpt0Y8a4xvS9UNS734s1hnxarbPAAKYDWsbnvFxUxYnHgsNMUvYAQADAgADeAADPQQ",
+    "USD_TRY": "AgACAgQAAxkDAAIBRmpt0ZAvpnG1cErTRO0WFxNBhan8AAKZDWsbnvFxU6O1l0rZLklNAQADAgADeAADPQQ",
+    "EUR_GBP": "AgACAgQAAxkDAAIBR2pt0ZHtOVQRnPg1rd0wPA2bGSW7AAKaDWsbnvFxU_wEQbqRqPEEAQADAgADeAADPQQ",
+    "EUR_JPY": "AgACAgQAAxkDAAIBSGpt0ZKnFicbxvLuWb7zlEsxwDQoAAKbDWsbnvFxU7p6wI-P3lL9AQADAgADeAADPQQ",
+    "GBP_USD": "AgACAgQAAxkDAAIBSWpt0ZMyOodHd3lTlZy5nhuTjDxHAAKcDWsbnvFxUwgqeJoQSH_BAQADAgADeAADPQQ",
+    "USD_JPY": "AgACAgQAAxkDAAIBSmpt0ZTmSXCQXRTcBtxu-u4H492bAAKdDWsbnvFxUw7rAfMaVZHzAQADAgADeAADPQQ",
+    "USD_CHF": "AgACAgQAAxkDAAIBS2pt0ZZgBRpCX3lJwl5hqtc4hPDIAAKeDWsbnvFxUxDfXRsCC6R6AQADAgADeAADPQQ"
   },
   "language": "fa",
-  "last_daily_message_id": 318,
+  "last_daily_message_id": 333,
   "last_daily_message_ids": {
-    "6884680317": 319,
-    "7461503310": 318,
-    "8821324201": 320
+    "6884680317": 334,
+    "7461503310": 333,
+    "8821324201": 335
+  },
+  "last_weekly_message_id": 322,
+  "last_weekly_message_ids": {
+    "6884680317": 323,
+    "7461503310": 322,
+    "8821324201": 324
   },
   "subscribers": [
     7461503310,
@@ -35,11 +41,5 @@
     "XAU/USD"
   ],
   "symbols_confirmed": true,
-  "weekly_report_weekday": 4,
-  "last_weekly_message_id": 322,
-  "last_weekly_message_ids": {
-    "7461503310": 322,
-    "6884680317": 323,
-    "8821324201": 324
-  }
+  "weekly_report_weekday": 4
 }
