@@ -1,28 +1,29 @@
 {
   "chart_file_ids": {
-    "EUR_GBP": "AgACAgQAAxkDAAICcGqGlpCrBu5Sw9hTVpj_qUfDsWUhAAKyDmsb-Z05UPcUjmpd_VGxAQADAgADeAADPQQ",
-    "EUR_JPY": "AgACAgQAAxkDAAICcWqGlpE-ZzOrqsAmfMXs8D5uIXGOAAKzDmsb-Z05UEwYRp97SdLTAQADAgADeAADPQQ",
-    "USD_CHF": "AgACAgQAAxkDAAICcmqGlpJZBS2n0vKV8wQotJlkXclJAAK0Dmsb-Z05UNNsT3i4lmnnAQADAgADeAADPQQ",
-    "NZD_USD": "AgACAgQAAxkDAAICc2qGlpP37YaOTVInrn9P4oHA7XoYAAK1Dmsb-Z05UNr41DT7LIbtAQADAgADeAADPQQ",
-    "AUD_USD": "AgACAgQAAxkDAAICdGqGlpRjA1Xhcl6ird-Bo0-kLkI3AAK2Dmsb-Z05UH1p_-GrckoeAQADAgADeAADPQQ",
-    "USD_CAD": "AgACAgQAAxkDAAICdWqGlpTAEsMGvaZYMdFlV0eiLIUiAAK3Dmsb-Z05UN5MvnVjrinXAQADAgADeAADPQQ"
+    "EUR_GBP": "AgACAgQAAxkDAAICfWqH6GG7xem6hfGHCVFU_ck5UealAAIkD2sbtmVAUDiin4lzuH2lAQADAgADeAADPQQ",
+    "EUR_JPY": "AgACAgQAAxkDAAICfmqH6GRPTvP_MBF1w2oCkdr6Mok7AAIlD2sbtmVAUOiCq-pek0-zAQADAgADeAADPQQ",
+    "USD_CHF": "AgACAgQAAxkDAAICf2qH6GX5qR3ALjq-e03CV2ZKvMGgAAImD2sbtmVAUHjw7GZLGi7vAQADAgADeAADPQQ",
+    "NZD_USD": "AgACAgQAAxkDAAICgGqH6GaipgQdYN_DFSpTO6aN0sfcAAInD2sbtmVAULRT6apGPYhHAQADAgADeAADPQQ",
+    "AUD_USD": "AgACAgQAAxkDAAICgWqH6Ge6juxWGiroSG_ONEFtM9iVAAIoD2sbtmVAUGDN4ja67mVnAQADAgADeAADPQQ",
+    "USD_CAD": "AgACAgQAAxkDAAICgmqH6Gdx1lnaSF0QPhC66PyCOJ0YAAIpD2sbtmVAUDKKK01r2yXMAQADAgADeAADPQQ",
+    "GBP_USD": "AgACAgQAAxkDAAICg2qH6Giw_nAIwFBLxzAfi-2XBw_WAAIqD2sbtmVAUP4GS7vi6IjmAQADAgADeAADPQQ"
   },
   "language": "en",
-  "last_daily_message_id": 631,
+  "last_daily_message_id": 645,
   "last_daily_message_ids": {
-    "6771889393": 633,
+    "6771889393": 647,
     "6884680317": 334,
-    "7461503310": 631,
-    "8821324201": 632,
-    "8828686693": 634
+    "7461503310": 645,
+    "8821324201": 646,
+    "8828686693": 648
   },
-  "last_weekly_message_id": 539,
+  "last_weekly_message_id": 650,
   "last_weekly_message_ids": {
-    "6771889393": 541,
+    "6771889393": 652,
     "6884680317": 323,
-    "7461503310": 539,
-    "8821324201": 540,
-    "8828686693": 542
+    "7461503310": 650,
+    "8821324201": 651,
+    "8828686693": 653
   },
   "subscribers": [
     7461503310,
@@ -35,10 +36,10 @@
     "EUR/GBP",
     "EUR/JPY",
     "USD/CHF",
-    "XAG/USD",
     "NZD/USD",
     "AUD/USD",
-    "USD/CAD"
+    "USD/CAD",
+    "GBP/USD"
   ],
   "symbols_confirmed": true,
   "weekly_report_weekday": 4
