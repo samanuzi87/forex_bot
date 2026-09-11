@@ -1,29 +1,29 @@
 {
   "chart_file_ids": {
-    "EUR_GBP": "AgACAgQAAxkDAAIDg2qifmU-wX3L5Q0uEi37-JsKjooyAAKFD2sbcpARUdtGBD9BaNhnAQADAgADeAADPQQ",
-    "EUR_JPY": "AgACAgQAAxkDAAIDhGqifme9Zq2HpN3L9qZKPgmoUaaTAAKGD2sbcpARUb7PL8tRQZNZAQADAgADeAADPQQ",
-    "USD_CHF": "AgACAgQAAxkDAAIDhWqifmly7QWySC93uHGSzbLSJOWRAAKHD2sbcpARUXqhhtlEVBpYAQADAgADeAADPQQ",
-    "NZD_USD": "AgACAgQAAxkDAAIDhmqifmok8D2ApEWTToy4Vr-8VBxmAAKID2sbcpARUVCMlgPUFv6BAQADAgADeAADPQQ",
-    "AUD_USD": "AgACAgQAAxkDAAIDh2qifmuoCaPuODQa-gEPwIKpFEKlAAKJD2sbcpARUV6yUhiHHqjsAQADAgADeAADPQQ",
-    "USD_CAD": "AgACAgQAAxkDAAIDiGqifm2Gl14bFE5HjOUaVEYZhuTKAAKKD2sbcpARUYTdDU1Q7wJwAQADAgADeAADPQQ",
-    "GBP_USD": "AgACAgQAAxkDAAIDiWqifm4EkALlY1A0-6cHwuwSHJioAAKLD2sbcpARUWCR3xOsmZ2EAQADAgADeAADPQQ"
+    "EUR_GBP": "AgACAgQAAxkDAAIDj2qjz2iYPiUUWuciR4msVqqSN3BHAAKwDmsbWxYhURMnXdQzgPj7AQADAgADeAADPQQ",
+    "EUR_JPY": "AgACAgQAAxkDAAIDkGqjz2nfJy1yf__bIw6-AwHidIuHAAKxDmsbWxYhUReoPO0FgXqlAQADAgADeAADPQQ",
+    "USD_CHF": "AgACAgQAAxkDAAIDkWqjz2ov0I-wl7IvNN2mUoMs7xeLAAKyDmsbWxYhUWwIWDz1RIvyAQADAgADeAADPQQ",
+    "NZD_USD": "AgACAgQAAxkDAAIDkmqjz2yl8gxHz85ReVW4p725JXXdAAKzDmsbWxYhUbTkH4UxYcUmAQADAgADeAADPQQ",
+    "AUD_USD": "AgACAgQAAxkDAAIDk2qjz23sBuvwudmwQ-0adTUxolaUAAK0DmsbWxYhUR_Tjvp3TkzBAQADAgADeAADPQQ",
+    "USD_CAD": "AgACAgQAAxkDAAIDlGqjz24avNT5xMgOzekI8SfwMGtfAAK1DmsbWxYhUeN42zpyDs1TAQADAgADeAADPQQ",
+    "GBP_USD": "AgACAgQAAxkDAAIDlWqjz3AEpl-fFfCeH25xsSfIlHnpAAK2DmsbWxYhUfJVmsUbh48SAQADAgADeAADPQQ"
   },
   "language": "en",
-  "last_daily_message_id": 907,
+  "last_daily_message_id": 919,
   "last_daily_message_ids": {
-    "6771889393": 909,
+    "6771889393": 921,
     "6884680317": 334,
-    "7461503310": 907,
-    "8821324201": 908,
-    "8828686693": 910
+    "7461503310": 919,
+    "8821324201": 920,
+    "8828686693": 922
   },
-  "last_weekly_message_id": 835,
+  "last_weekly_message_id": 924,
   "last_weekly_message_ids": {
-    "6771889393": 837,
+    "6771889393": 926,
     "6884680317": 323,
-    "7461503310": 835,
-    "8821324201": 836,
-    "8828686693": 838
+    "7461503310": 924,
+    "8821324201": 925,
+    "8828686693": 927
   },
   "subscribers": [
     7461503310,
