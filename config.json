@@ -1,21 +1,21 @@
 {
   "chart_file_ids": {
-    "EUR_GBP": "AgACAgQAAxkDAAIDj2qjz2iYPiUUWuciR4msVqqSN3BHAAKwDmsbWxYhURMnXdQzgPj7AQADAgADeAADPQQ",
-    "EUR_JPY": "AgACAgQAAxkDAAIDkGqjz2nfJy1yf__bIw6-AwHidIuHAAKxDmsbWxYhUReoPO0FgXqlAQADAgADeAADPQQ",
-    "USD_CHF": "AgACAgQAAxkDAAIDkWqjz2ov0I-wl7IvNN2mUoMs7xeLAAKyDmsbWxYhUWwIWDz1RIvyAQADAgADeAADPQQ",
-    "NZD_USD": "AgACAgQAAxkDAAIDkmqjz2yl8gxHz85ReVW4p725JXXdAAKzDmsbWxYhUbTkH4UxYcUmAQADAgADeAADPQQ",
-    "AUD_USD": "AgACAgQAAxkDAAIDk2qjz23sBuvwudmwQ-0adTUxolaUAAK0DmsbWxYhUR_Tjvp3TkzBAQADAgADeAADPQQ",
-    "USD_CAD": "AgACAgQAAxkDAAIDlGqjz24avNT5xMgOzekI8SfwMGtfAAK1DmsbWxYhUeN42zpyDs1TAQADAgADeAADPQQ",
-    "GBP_USD": "AgACAgQAAxkDAAIDlWqjz3AEpl-fFfCeH25xsSfIlHnpAAK2DmsbWxYhUfJVmsUbh48SAQADAgADeAADPQQ"
+    "EUR_GBP": "AgACAgQAAxkDAAIDoGqlG1-FVUKuq3sl2p70d5d5zqrGAAIgEWsbQikoUXlrQ30MEa1EAQADAgADeAADPQQ",
+    "EUR_JPY": "AgACAgQAAxkDAAIDoWqlG2C-3Vyk8FjmmoQ_gPDEhBCqAAIhEWsbQikoUWGH9rmcDDkQAQADAgADeAADPQQ",
+    "USD_CHF": "AgACAgQAAxkDAAIDomqlG2G_gOoUhvfwvwwiangk7by8AAIiEWsbQikoUTvTWjIYy4ZXAQADAgADeAADPQQ",
+    "NZD_USD": "AgACAgQAAxkDAAIDo2qlG2P5MgE9yiwAAQo5gpKNTygiHwACIxFrG0IpKFETnm8bfkG62QEAAwIAA3gAAz0E",
+    "AUD_USD": "AgACAgQAAxkDAAIDpGqlG2QUFOAjUydC0ICYSZVOPC0uAAIkEWsbQikoUTJnhzPgldggAQADAgADeAADPQQ",
+    "USD_CAD": "AgACAgQAAxkDAAIDpWqlG2ZFn4oPaPfYLHH0yMnpW7_1AAIlEWsbQikoUWBtj6YO0cq-AQADAgADeAADPQQ",
+    "GBP_USD": "AgACAgQAAxkDAAIDpmqlG2epB0KLPdlTZOPoCCmD-zqHAAImEWsbQikoUQZasvUgweqIAQADAgADeAADPQQ"
   },
   "language": "en",
-  "last_daily_message_id": 919,
+  "last_daily_message_id": 936,
   "last_daily_message_ids": {
-    "6771889393": 921,
+    "6771889393": 938,
     "6884680317": 334,
-    "7461503310": 919,
-    "8821324201": 920,
-    "8828686693": 922
+    "7461503310": 936,
+    "8821324201": 937,
+    "8828686693": 939
   },
   "last_weekly_message_id": 924,
   "last_weekly_message_ids": {
